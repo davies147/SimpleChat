@@ -7,7 +7,7 @@
  * Creates a new SimpleChat singleton and initialises it with the user info
  * that it will use to authenticate against the PBX. Plants callbacks
  * that will be used to signal API startup completion and called when
- * a call status changes on a line.
+ * a call status changes on a line. 
  *
  * @constructor
  *
@@ -29,18 +29,22 @@
 /**
  * Call event callback
  * 
- * @callback SimpleCTI~eventCallback
+ * @callback SimpleChat~eventCallback
  * @param opaque
  *            {String} something
  *            
  */
 
-var SimpleChat = (function(username, password, messageCB) {
+var SimpleChat = (function(username, password, statusCB, messageCB) {
 	var username = username, 
-	password = password, 
+	password = password,
+	address = null,
 	CB = {
-			message : messageCB
-	};
+			message : messageCB,
+			status : statusCB
+	},
+	cid = [],
+	roomID = null;
 
 	
 	/**
@@ -50,7 +54,7 @@ var SimpleChat = (function(username, password, messageCB) {
 	 * @param ok
 	 */
 	function authCB(ok) {
-		console.log('SimpleCTI.authCB(' + ok + ')');
+		console.log('SimpleChat.authCB(' + ok + ')');
 
 		if (ok) {
 			/*
@@ -78,12 +82,32 @@ var SimpleChat = (function(username, password, messageCB) {
 	 * Handler for API initialised event
 	 */
 	function go() {
-		console.log('SimpleCTI.go()');
-
+		console.log('SimpleChat.go()');
+		IPCortex.PBX.enableChat(roomCB, presenceCB)
 		// Once initialised, request all our owned lines are returned
-//		IPCortex.PBX.getLines(linesCB, true);
 		CB.status(true, 0, "API Initialised");
 	}
+	
+	function roomCB (room){
+		roomID = room.roomID;
+	}
+	function presenceCB (presence){}
+	/**
+	 * Receive addressbook (chat roster)
+	 */
+	function addressCB(address, deleted){
+		for(var v = 0; v < address.length; v++)
+			if(!address[v].get('online'))
+				address.splice(v--,1);
+		address.forEach(function(a){cid[a.get('cid')] = a});
+		if(this.address == null)
+			this.address = address;
+		else
+			this.address.push(address);
+		if(CB.address)
+			CB.address(address);
+	}
+
 
 		// Global onAPILoadReady is a special function called by ipcortex API
 	// wrapper
@@ -94,17 +118,31 @@ var SimpleChat = (function(username, password, messageCB) {
 	console.log('setup onAPILoadReady');
 
 	return {
+		
 		/**
-		 * Answer a call
+		 * getRoster
 		 * 
-		 * @param id
-		 *            {String} ID of call to answer
+		 * @param cb {SimpleChat~rosterCB} 
+		 * 		callback for roster array (may be called multiple times
+		 * 		if roster changes underneath you
+		 * 
 		 */
-		answer : function(id) {
-			console.log('Answer ID: ' + id);
+		getRoster : function(cb) {
+			if (this.address == null){
+				IPCortex.PBX.getAddressbook(addressCB);
+				CB.address = cb;
+			}
+			else{
+				cb(this.address);
+			}
 
-			if (id != null || calls[id] == null)
-				calls[id].talk();
+		},
+		openRoom : function(id){
+			if(cid[id])
+				cid[id].chat();
+		},
+		addParticipant : function(cid){
+			
 		}
 	};
 });
