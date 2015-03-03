@@ -1,0 +1,123 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<style>
+	.room {
+		width:		200px;
+		height:		240px;
+	}
+
+	.messages {
+		width:		200px;
+		height:		200px;
+		font-size:	10px;
+	}
+	
+	.input {
+		width:		150px;
+	}
+
+	.button {
+		margin-left:	3px;	
+	}
+</style>
+<script src="simpleChat.js" type="text/javascript"></script>
+<script src="https://10.0.0.1/wrapper.whtm" type="text/javascript"></script>
+<script>
+
+var contactLookup = {};
+var Chat = new SimpleChat(null, null, statusCB, roomCB);
+
+function statusCB(status, reason, code) {
+	var apiStatus = document.getElementById('status').firstChild;
+	apiStatus.nodeValue = reason + ' (' + code + ')';
+	Chat.getOnline(contactCB);
+}
+
+function roomCB(room) {
+	var input = null;
+	function post() {
+		Chat.postRoom(input.getAttribute('data-id'), input.value);
+		input.value = '';
+	}
+	var roomList = document.getElementById('room-list');
+	var rooms = roomList.children;
+	for ( var i = 0; i < rooms.length; i++ ) {
+		var id = rooms[i].getAttribute('data-id');
+		if ( room.id == id ) {
+			if ( room.state == 'dead' )
+				rooms[i].parentNode.removeChild(rooms[i]);
+			else if ( room.msg ) {
+				console.log(room.msg.msg);
+				rooms[i].getElementsByTagName('TEXTAREA')[0].value += contactLookup[room.msg.cid] + ': ' +  room.msg.msg + '\n';
+			}
+			return;
+		}
+	}
+	var div = document.createElement('div');
+	div.setAttribute('data-id', room.id);
+	div.className = 'room';
+	var textarea = document.createElement('textarea');
+	textarea.className = 'messages';
+	div.appendChild(textarea);
+	input = document.createElement('input');
+	input.setAttribute('data-id', room.id);
+	input.className = 'input';
+	div.appendChild(input);
+	var button = document.createElement('button');
+	button.className = 'button';
+	button.innerHTML = 'post';
+	button.onclick = post;
+	div.appendChild(button);
+	roomList.appendChild(div);
+}
+
+function contactCB(contact) {
+	var contactList = document.getElementById('contact-list');
+	var contacts = contactList.children;
+	for ( var i = 0; i < contacts.length; i++ ) {
+		var cid = contacts[i].getAttribute('data-cid');
+		if ( contact.cid == cid && ! contact.online ) {
+			contacts[i].parentNode.removeChild(contacts[i]);
+			delete contactLookup[contact.cid];
+			return;
+		}
+	}
+	contactLookup[contact.cid] = contact.name;
+	var option = document.createElement('option');
+	option.setAttribute('data-cid', contact.cid);
+	option.innerHTML = contact.name;
+	contactList.appendChild(option);
+}
+
+function openRoom() {
+	var cids = [];
+	var contactList = document.getElementById('contact-list');
+	var options = contactList.getElementsByTagName('OPTION');
+	for ( var i = 0; i < options.length; i++ ) {
+		if ( options[i].selected )
+			cids.push(options[i].getAttribute('data-cid'));
+	}
+	if ( cids.length )
+		Chat.openRoom(cids);
+	else
+		alert('No contacts selected!');
+}
+
+</script>
+
+
+<title>Simple Chat Test page</title>
+</head>
+<body>
+	<h1>Simple Chat Test</h1>
+	<p>This page displays the status and a google lookup of the phone number for any inbound or outbound call</p>
+
+	<h2 id="status">API not initialised</h1>
+
+	<h1 id="callstatus">Nothing doing</h1>
+	<p><select id="contact-list" multiple></select></p>
+	<p><button onclick="openRoom();">Add</button></p>
+	<p><div id="room-list"></div></p>
+</body>
+</html>
