@@ -2,9 +2,22 @@
 <html>
 <head>
 <style>
+	#contact-list {
+		height:		130px;
+		width:		110px;
+		font-size:	10px;
+	}
+
+	.room-name {
+
+	}
+
 	.room {
-		width:		200px;
-		height:		240px;
+		width:		206px;
+		height:		250px;
+		margin-right:	10px;
+		float:		left;
+		clear:		none;
 	}
 
 	.messages {
@@ -15,107 +28,128 @@
 	
 	.input {
 		width:		150px;
+		font-size:	10px;
 	}
 
 	.button {
-		margin-left:	3px;	
+		margin-left:	10px;	
 	}
 </style>
 <script src="simpleChat.js" type="text/javascript"></script>
-<script src="https://10.0.0.1/wrapper.whtm" type="text/javascript"></script>
+<script src="https://pabx1.ipcortex.net/api/wrapper.whtm" type="text/javascript"></script>
 <script>
-
-var contactLookup = {};
+var lookup = {
+	room:		{},
+	contact:	{}
+};
 var Chat = new SimpleChat(null, null, statusCB, roomCB);
 
 function statusCB(status, reason, code) {
-	var apiStatus = document.getElementById('status').firstChild;
-	apiStatus.nodeValue = reason + ' (' + code + ')';
-	Chat.getOnline(contactCB);
+	if ( status )
+		Chat.getOnline(contactCB);
+	document.getElementById('status').firstChild.nodeValue = reason + ' (' + code + ')';
+}
+
+function buildHtml(html, parentNode, store) {
+	for ( var i = 0; i < html.length; i++ ) {
+		var elm = null;
+		if ( html[i].elm == 'text' )
+			elm = document.createTextNode(html[i].txt);
+		else
+			elm = document.createElement(html[i].elm);
+		if ( html[i].attr ) {
+			for ( var prop in html[i].attr )
+				elm.setAttribute(prop, html[i].attr[prop]);
+		}
+		if ( html[i].lstn ) {
+			for ( var list in html[i].lstn  )
+				elm.addEventListener(list, html[i].lstn[list]);
+
+		}
+		if ( typeof(store) == 'object' && html[i].rtrn )
+			store[html[i].rtrn] = elm;
+		if ( html[i].chld instanceof Array )
+			buildHtml(html[i].chld, elm, store);
+		parentNode.appendChild(elm);
+	}
 }
 
 function roomCB(room) {
-	var input = null;
-	function post() {
-		Chat.postRoom(input.getAttribute('data-id'), input.value);
-		input.value = '';
+	function post(e) {
+		var id = e.target.getAttribute('data-id');
+		if ( ! lookup.room[id] )
+			return;
+		Chat.postRoom(id, lookup.room[id].input.value);
+		lookup.room[id].input.value = '';
 	}
-	var roomList = document.getElementById('room-list');
-	var rooms = roomList.children;
-	for ( var i = 0; i < rooms.length; i++ ) {
-		var id = rooms[i].getAttribute('data-id');
-		if ( room.id == id ) {
-			if ( room.state == 'dead' )
-				rooms[i].parentNode.removeChild(rooms[i]);
-			else if ( room.msg ) {
-				console.log(room.msg.msg);
-				rooms[i].getElementsByTagName('TEXTAREA')[0].value += contactLookup[room.msg.cid] + ': ' +  room.msg.msg + '\n';
-			}
+	if ( lookup.room[room.id] ) {
+		if ( room.state == 'dead' ) {
+			lookup.room[room.id].body.parentNode.removeChild(lookup.room[room.id]);
+			delete lookup.room[room.id];
 			return;
 		}
+		if ( room.msg ) {
+			lookup.room[room.id].text.value += lookup.contact[room.msg.cid].name + ': ' +  room.msg.msg + '\n';
+			lookup.room[room.id].text.scrollTop = lookup.room[room.id].text.scrollHeight;
+		}
+		if ( room.name != lookup.room[room.id].name.nodeValue )
+			lookup.room[room.id].name.nodeValue = room.name;
+		return;
 	}
-	var div = document.createElement('div');
-	div.setAttribute('data-id', room.id);
-	div.className = 'room';
-	var textarea = document.createElement('textarea');
-	textarea.className = 'messages';
-	div.appendChild(textarea);
-	input = document.createElement('input');
-	input.setAttribute('data-id', room.id);
-	input.className = 'input';
-	div.appendChild(input);
-	var button = document.createElement('button');
-	button.className = 'button';
-	button.innerHTML = 'post';
-	button.onclick = post;
-	div.appendChild(button);
-	roomList.appendChild(div);
+	lookup.room[room.id] = {};
+	var html = [
+		{elm: 'div', rtrn: 'body', attr: {class: 'room'}, chld: [
+			{elm: 'div', chld: [
+				{elm: 'text', rtrn: 'name', txt: room.name}
+			]},
+			{elm: 'textarea', rtrn: 'text', attr: {class: 'messages'}},
+			{elm: 'input', rtrn: 'input', attr: {class: 'input'}},
+			{elm: 'button', attr: {class: 'button', 'data-id': room.id}, lstn: {click: post}, chld: [
+				{elm: 'text', txt: 'post'}
+			]}
+		]}
+	];
+	buildHtml(html, document.getElementById('room-list'), lookup.room[room.id]);
 }
 
 function contactCB(contact) {
-	var contactList = document.getElementById('contact-list');
-	var contacts = contactList.children;
-	for ( var i = 0; i < contacts.length; i++ ) {
-		var cid = contacts[i].getAttribute('data-cid');
-		if ( contact.cid == cid && ! contact.online ) {
-			contacts[i].parentNode.removeChild(contacts[i]);
-			delete contactLookup[contact.cid];
-			return;
+	if ( lookup.contact[contact.cid] ) {
+		if ( ! contact.online ) {
+			lookup.contact[contact.cid].body.parentNode.removeChild(lookup.contact[contact.cid].body);
+			delete lookup.contact[contact.cid];
 		}
+		return;
 	}
-	contactLookup[contact.cid] = contact.name;
-	var option = document.createElement('option');
-	option.setAttribute('data-cid', contact.cid);
-	option.innerHTML = contact.name;
-	contactList.appendChild(option);
+	lookup.contact[contact.cid] = {name: contact.name};
+	var html = [
+		{elm: 'option', rtrn: 'body', attr: {'data-cid': contact.cid}, chld: [
+			{elm: 'text', txt: contact.name}
+		]}
+	];
+	buildHtml(html, document.getElementById('contact-list'), lookup.contact[contact.cid]);
 }
 
 function openRoom() {
 	var cids = [];
-	var contactList = document.getElementById('contact-list');
-	var options = contactList.getElementsByTagName('OPTION');
-	for ( var i = 0; i < options.length; i++ ) {
-		if ( options[i].selected )
-			cids.push(options[i].getAttribute('data-cid'));
+	var contacts = document.getElementById('contact-list').children;
+	for ( var i = 0; i < contacts.length; i++ ) {
+		if ( contacts[i].selected )
+			cids.push(contacts[i].getAttribute('data-cid'));
 	}
 	if ( cids.length )
 		Chat.openRoom(cids);
 	else
 		alert('No contacts selected!');
 }
-
 </script>
-
-
 <title>Simple Chat Test page</title>
 </head>
 <body>
 	<h1>Simple Chat Test</h1>
-	<p>This page displays the status and a google lookup of the phone number for any inbound or outbound call</p>
 
 	<h2 id="status">API not initialised</h1>
 
-	<h1 id="callstatus">Nothing doing</h1>
+	<p>Contacts</p>
 	<p><select id="contact-list" multiple></select></p>
 	<p><button onclick="openRoom();">Add</button></p>
 	<p><div id="room-list"></div></p>
