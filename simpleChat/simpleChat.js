@@ -216,12 +216,14 @@ var SimpleChat = (
 			openRoom:
 				function(cids) {
 					cids = [].concat(cids);
+/* TODO: remove 'myself' from the list if found! */
 					if ( ! lookup.contact[cids[0]] || active.xmppid )
 						return false;
 					function cb(a, b) {
-
+/* TODO: Handle error response */
 					}
 					function done(room) {
+						/* When the room is created, add remaining contacts */
 						for ( var i = 0; i < cids.length; i++ )
 							room.link(cids[i]);
 					}
@@ -242,8 +244,7 @@ var SimpleChat = (
 				function(roomID, name) {
 					if ( ! lookup.room[roomID] )
 						return false;
-/* TODO: Not possible if room has only 2 members. Fixme! */
-					lookup.room[roomID].modify({name: name});
+					lookup.room[roomID].modify({name: name, gomulti: true});
 				},
 /**
  * Leave a room. Other members will remain in the room.
