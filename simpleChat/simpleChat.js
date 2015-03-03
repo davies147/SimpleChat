@@ -240,10 +240,24 @@ var SimpleChat = (
  */
 			renameRoom:
 				function(roomID, name) {
-
+					if ( ! lookup.room[roomID] )
+						return false;
+/* TODO: Not possible if room has only 2 members. Fixme! */
+					lookup.room[roomID].modify({name: name});
 				},
 /**
- * Post a message into a room
+ * Leave a room. Other members will remain in the room.
+ *
+ * @param {Number} roomID The ID of the room to rename
+ */
+			leaveRoom:
+				function(roomID) {
+					if ( ! lookup.room[roomID] )
+						return false;
+					lookup.room[roomID].leave();
+				},
+/**
+ * Post a message into a room.
  *
  * @param {Number} roomID The ID of the room to rename
  * @param {String} msg The message to post
