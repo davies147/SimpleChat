@@ -84,6 +84,7 @@ var SimpleChat = (
  *			NOTE: After a call with 'dead' the room ceases to exist and
  *				should be cleaned up and not used again.
  *	members:	An array containing a list of joined members in the room.
+ *	invited:	An array containing a list of invited members who have not since closed the room.
  *	msg:		null = no new messages, or {cid: sender_id, time: timestamp_of_message, msg: message_text}
  *
  * @private
@@ -93,7 +94,8 @@ var SimpleChat = (
 				id:		room.get('roomID'),
 				name:		room.get('name'),
 				state:		room.get('state'),
-				members:	room.get('joined'),
+				members:	room.get('joined').sort(),
+				invited:	room.get('linked').sort(),
 				msg:		null
 			};
 			var tmp = [];
@@ -123,14 +125,6 @@ var SimpleChat = (
  */
 		function roomCB(room) {
 			lookup.room[room.get('roomID')] = room;
-			if ( room.get('xmppid') == active.xmppid ) {
-				if ( typeof(active.callback) == 'function' )
-					active.callback(room);
-				active = {
-					xmppid:		null,
-					callback:	null
-				};
-			}
 			roomUpdate(null, null, room);
 			room.hook(roomUpdate);
 		}
@@ -216,21 +210,11 @@ var SimpleChat = (
 			openRoom:
 				function(cids) {
 					cids = [].concat(cids);
-					if ( ! lookup.contact[cids[0]] || active.xmppid )
-						return false;
 					function cb(a, b) {
-
+/* TODO: Handle error response */
 					}
-					function done(room) {
-						for ( var i = 0; i < cids.length; i++ )
-							room.link(cids[i]);
-					}
-					var contact = lookup.contact[cids[0]];
 /* TODO: support multiple outstanding rooms! */
-					active.xmppid = contact.get('xmppid');
-					active.callback = done;
-					contact.chat(cb);
-					cids.shift();
+					IPCortex.PBX.chatInvite(cids, cb)
 				},
 /**
  * Rename an existing room.
@@ -242,8 +226,18 @@ var SimpleChat = (
 				function(roomID, name) {
 					if ( ! lookup.room[roomID] )
 						return false;
-/* TODO: Not possible if room has only 2 members. Fixme! */
-					lookup.room[roomID].modify({name: name});
+					lookup.room[roomID].modify({name: name, gomulti: true});
+				},
+/**
+ * Get owner ID of room (null if none or unknown)
+ *
+ * @param {Number} roomID The ID of the room to rename
+ */
+			getOwnerId:
+				function(roomID) {
+					if ( ! lookup.room[roomID] )
+						return false;
+					return lookup.room[roomID].get('owner');
 				},
 /**
  * Leave a room. Other members will remain in the room.
