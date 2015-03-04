@@ -105,7 +105,8 @@ var SimpleChat = (
 					tmp.push({
 						cid:	msgs[i].cID,
 						time:	msgs[i].time,
-						msg:	msgs[i].msg
+						msgid:	msgs[i].msgID,
+						txt:	msgs[i].msg
 					});
 			}
 			if ( tmp.length ) {
