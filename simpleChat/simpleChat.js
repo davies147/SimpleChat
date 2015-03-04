@@ -123,14 +123,6 @@ var SimpleChat = (
  */
 		function roomCB(room) {
 			lookup.room[room.get('roomID')] = room;
-			if ( room.get('xmppid') == active.xmppid ) {
-				if ( typeof(active.callback) == 'function' )
-					active.callback(room);
-				active = {
-					xmppid:		null,
-					callback:	null
-				};
-			}
 			roomUpdate(null, null, room);
 			room.hook(roomUpdate);
 		}
@@ -216,23 +208,11 @@ var SimpleChat = (
 			openRoom:
 				function(cids) {
 					cids = [].concat(cids);
-/* TODO: remove 'myself' from the list if found! */
-					if ( ! lookup.contact[cids[0]] || active.xmppid )
-						return false;
 					function cb(a, b) {
 /* TODO: Handle error response */
 					}
-					function done(room) {
-						/* When the room is created, add remaining contacts */
-						for ( var i = 0; i < cids.length; i++ )
-							room.link(cids[i]);
-					}
-					var contact = lookup.contact[cids[0]];
 /* TODO: support multiple outstanding rooms! */
-					active.xmppid = contact.get('xmppid');
-					active.callback = done;
-					contact.chat(cb);
-					cids.shift();
+					IPCortex.PBX.chatInvite(cids, cb)
 				},
 /**
  * Rename an existing room.
