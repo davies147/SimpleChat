@@ -93,7 +93,7 @@ var SimpleChat = (
 				id:		room.get('roomID'),
 				name:		room.get('name'),
 				state:		room.get('state'),
-				members:	room.get('joined'),
+				members:	room.get('joined').sort(),
 				msg:		null
 			};
 			var tmp = [];
@@ -225,6 +225,17 @@ var SimpleChat = (
 					if ( ! lookup.room[roomID] )
 						return false;
 					lookup.room[roomID].modify({name: name, gomulti: true});
+				},
+/**
+ * Get owner ID of room (null if none or unknown)
+ *
+ * @param {Number} roomID The ID of the room to rename
+ */
+			getOwnerId:
+				function(roomID) {
+					if ( ! lookup.room[roomID] )
+						return false;
+					lookup.room[roomID].get('owner');
 				},
 /**
  * Leave a room. Other members will remain in the room.
