@@ -84,6 +84,7 @@ var SimpleChat = (
  *			NOTE: After a call with 'dead' the room ceases to exist and
  *				should be cleaned up and not used again.
  *	members:	An array containing a list of joined members in the room.
+ *	invited:	An array containing a list of invited members who have not since closed the room.
  *	msg:		null = no new messages, or {cid: sender_id, time: timestamp_of_message, msg: message_text}
  *
  * @private
@@ -94,6 +95,7 @@ var SimpleChat = (
 				name:		room.get('name'),
 				state:		room.get('state'),
 				members:	room.get('joined').sort(),
+				invited:	room.get('linked').sort(),
 				msg:		null
 			};
 			var tmp = [];
