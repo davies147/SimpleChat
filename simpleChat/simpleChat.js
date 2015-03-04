@@ -237,7 +237,7 @@ var SimpleChat = (
 				function(roomID) {
 					if ( ! lookup.room[roomID] )
 						return false;
-					lookup.room[roomID].get('owner');
+					return lookup.room[roomID].get('owner');
 				},
 /**
  * Leave a room. Other members will remain in the room.
