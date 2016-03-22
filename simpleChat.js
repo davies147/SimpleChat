@@ -18,26 +18,48 @@ var SimpleChat = (
  * @param {SimpleChat~statusCallback} status to call on error or successful API initialisation
  * @param {SimpleChat~roomCallback} room to call when a chat room event occurs
  * 		See roomUpdate() for details.
+ *
+ * Alternatively, to use the API built-in login mech:
+ * 
+ * @constructor
+ *
+ * @param {SimpleChat~statusCallback} status to call on error or successful API initialisation
+ * @param {SimpleChat~roomCallback} room to call when a chat room event occurs
+ * 		See roomUpdate() for details.
  */
-	function(username, password, status, room) {
+	function(arg1, arg2, arg3, arg4) {
+		var CB;
 		var tmp = {};
 		var rooms = {};
 		var online = {};
-
 		var lookup = {
 			contact:	{},
 			room:		{}
 		};
 
-		var active = {
-			xmppid:		null,
-			callback:	null
-		};
-
-		var CB = {
-			room:		room,
-			status:		status
-		};
+		if(typeof arg1 === 'function' || typeof arg2 === 'function') {
+			CB = {
+				status:	arg1,
+				room:	arg2
+			};
+			onAPILoadReady = function() {
+				IPCortex.PBX.Auth.login()
+				.then(function(ret) {
+					authCB(true);
+				})
+				.catch(function(ret) {
+					authCB(false);
+				});
+			};
+		} else {
+			CB = {
+				status:	arg3,
+				room:	arg4
+			};
+			onAPILoadReady = function() {
+				IPCortex.PBX.Auth.login(arg1, arg2, null, authCB);
+			};
+		}
 
 /**
  * Internal method to handle authentication-OK and the resultant
@@ -165,15 +187,6 @@ var SimpleChat = (
 				address[i].hook(addressUpdate);
 			}
 		}
-
-/**
- * Used by the API initialisation process
- */
-		onAPILoadReady = (
-			function() {
-				IPCortex.PBX.Auth.login(username, password, null, authCB);
-			}
-		);
 
 		return {
 /**

@@ -36,13 +36,13 @@
 	}
 </style>
 <script src="simpleChat.js" type="text/javascript"></script>
-<script src="https://pabx1.ipcortex.net/api/wrapper.whtm" type="text/javascript"></script>
+<script src="https://pabx.hostname/api/wrapper.whtm" type="text/javascript"></script>
 <script>
 var lookup = {
 	room:		{},
 	contact:	{}
 };
-var Chat = new SimpleChat(null, null, statusCB, roomCB);
+var Chat = new SimpleChat(statusCB, roomCB);
 
 function statusCB(status, reason, code) {
 	if ( status )
@@ -89,7 +89,7 @@ function roomCB(room) {
 			return;
 		}
 		if ( room.msg ) {
-			lookup.room[room.id].text.value += lookup.contact[room.msg.cid].name + ': ' +  room.msg.msg + '\n';
+			lookup.room[room.id].text.value += lookup.contact[room.msg.cid].name + ': ' +  room.msg.txt + '\n';
 			lookup.room[room.id].text.scrollTop = lookup.room[room.id].text.scrollHeight;
 		}
 		if ( room.name != lookup.room[room.id].name.nodeValue )
